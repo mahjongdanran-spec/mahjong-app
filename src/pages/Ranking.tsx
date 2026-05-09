@@ -24,7 +24,16 @@ const Ranking = () => {
 
   const rankedMembers = members
     .map(m => computeStats(m, matches, history, period))
-    .sort((a, b) => b.totalPoints - a.totalPoints);
+    .sort((a, b) => {
+      // members with no matches go to the bottom
+      if (a.totalMatches === 0 && b.totalMatches === 0) return 0;
+      if (a.totalMatches === 0) return 1;
+      if (b.totalMatches === 0) return -1;
+      // lower avgRank = better
+      if (a.avgRank !== b.avgRank) return a.avgRank - b.avgRank;
+      // tiebreak: more matches = higher rank
+      return b.totalMatches - a.totalMatches;
+    });
 
   const getRankIcon = (index: number) => {
     if (index === 0) return <Crown size={20} color="#FFD700" fill="#FFD700" />;
@@ -34,6 +43,9 @@ const Ranking = () => {
       <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#8E8E93' }}>{index + 1}</span>
     );
   };
+
+  const pct = (count: number, total: number) =>
+    total === 0 ? '---' : `${((count / total) * 100).toFixed(1)}%`;
 
   if (loading) {
     return (
@@ -64,7 +76,7 @@ const Ranking = () => {
       </div>
 
       <p className="text-muted mb-4" style={{ fontSize: '0.8rem' }}>
-        累積ポイント順（対戦結果 + 手動調整の合計）
+        平均着順順（試合数が多いほど上位）
       </p>
 
       <div className="list-container">
@@ -80,37 +92,30 @@ const Ranking = () => {
               style={{
                 padding: '1rem',
                 borderLeft:
-                  index < 3
-                    ? `4px solid ${
-                        index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : '#CD7F32'
-                      }`
+                  index < 3 && s.totalMatches > 0
+                    ? `4px solid ${index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : '#CD7F32'}`
                     : '',
               }}
             >
               <div className="flex align-center justify-between">
                 <div className="flex align-center gap-4">
                   <div style={{ width: '32px', display: 'flex', justifyContent: 'center' }}>
-                    {getRankIcon(index)}
+                    {s.totalMatches > 0 ? getRankIcon(index) : (
+                      <span style={{ fontSize: '0.8rem', color: '#8E8E93' }}>--</span>
+                    )}
                   </div>
                   <div>
                     <div style={{ fontWeight: 800, fontSize: '1rem' }}>{s.member.name}</div>
                     <div className="text-muted" style={{ fontSize: '0.75rem' }}>
-                      {s.totalMatches} 試合 ・ 平均着順{' '}
-                      {s.totalMatches > 0 ? s.avgRank.toFixed(2) : '---'}
+                      {s.totalMatches} 試合 ・ 1着率 {pct(s.placements[1], s.totalMatches)}
                     </div>
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div
-                    style={{
-                      fontWeight: 800,
-                      color: s.totalPoints >= 0 ? 'var(--primary)' : 'var(--danger)',
-                      fontSize: '1.1rem',
-                    }}
-                  >
-                    {s.totalPoints > 0 ? '+' : ''}{s.totalPoints}
-                    <span style={{ fontSize: '0.75rem' }}> pts</span>
+                  <div style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--primary)' }}>
+                    {s.totalMatches === 0 ? '---' : s.avgRank.toFixed(2)}
                   </div>
+                  <div className="text-muted" style={{ fontSize: '0.7rem' }}>平均着順</div>
                 </div>
               </div>
             </div>
